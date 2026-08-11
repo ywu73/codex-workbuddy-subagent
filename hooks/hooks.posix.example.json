@@ -1,0 +1,19 @@
+{
+  "description": "One-shot plaintext task handoff for the WorkBuddy-backed workbuddy_worker.",
+  "hooks": {
+    "SubagentStart": [
+      {
+        "matcher": "^workbuddy_worker$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"/absolute/path/to/plaintext_handoff.py\" --mode hook",
+            "timeout": 10,
+            "statusMessage": "Delivering the staged WorkBuddy assignment",
+            "additionalContextLimit": 0
+          }
+        ]
+      }
+    ]
+  }
+}

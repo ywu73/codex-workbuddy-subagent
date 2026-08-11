@@ -1,0 +1,37 @@
+{
+  "name": "workbuddy-bridge",
+  "version": "1.0.1+codex.20260810171607",
+  "description": "Delegate bounded, persistent, approval-gated local tasks from Codex to WorkBuddy. Also provides a native workbuddy_worker custom subagent with one-shot Hook delivery.",
+  "author": {
+    "name": "wuyi"
+  },
+  "license": "MIT",
+  "keywords": [
+    "workbuddy",
+    "codebuddy",
+    "mcp",
+    "local-agent",
+    "subagent",
+    "custom-agent",
+    "workbuddy-worker",
+    "use-workbuddy-worker"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "WorkBuddy Bridge",
+    "shortDescription": "Orchestrate bounded WorkBuddy workers with native subagent",
+    "longDescription": "A versioned, persistent, auditable, approval-gated, worktree-aware bridge from Codex to the WorkBuddy CLI, plus a native custom subagent (workbuddy_worker) with plaintext Hook delivery.",
+    "developerName": "wuyi",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Delegate a bounded plan or confirmed scoped edit to workbuddy_worker.",
+      "Use the native subagent path for one-shot WorkBuddy tasks.",
+      "Run a confirmed scoped edit through WorkBuddy and verify the evidence."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

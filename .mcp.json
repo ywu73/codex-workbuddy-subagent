@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "workbuddy-bridge": {
+      "command": "node",
+      "args": ["./mcp-server/dist/src/server.js"],
+      "cwd": "."
+    }
+  }
+}

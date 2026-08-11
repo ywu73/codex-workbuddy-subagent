@@ -1,0 +1,19 @@
+{
+  "description": "One-shot plaintext task handoff for the WorkBuddy-backed workbuddy_worker.",
+  "hooks": {
+    "SubagentStart": [
+      {
+        "matcher": "^workbuddy_worker$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"C:\\\\ABSOLUTE\\\\PATH\\\\TO\\\\plaintext-handoff.ps1\" -Mode hook",
+            "timeout": 10,
+            "statusMessage": "Delivering the staged WorkBuddy assignment",
+            "additionalContextLimit": 0
+          }
+        ]
+      }
+    ]
+  }
+}
