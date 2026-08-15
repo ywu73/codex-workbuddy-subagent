@@ -4,7 +4,7 @@
 
 ## 组合边界
 
-Codex 主任务保持当前模型、provider 和登录不变。四个 `workbuddy_worker*` 是 Codex 原生
+Codex 主任务保持当前模型、provider 和登录不变。四个带模型标识的 WorkBuddy agent type 是 Codex 原生
 管理的独立 child，通过受信任的 `SubagentStart` Hook 接收父 Agent 的一次性
 plaintext assignment。child 的 provider 指向本地 Responses-to-ACP adapter，
 由 adapter 启动 WorkBuddy `codebuddy` CLI 执行实际任务。
@@ -34,9 +34,9 @@ provider 表示问题，也保证一次任务只交付一次。
 
 ## Agent 配置
 
-四个 `agents/workbuddy-worker*.toml` 分别定义：
+四个 `agents/workbuddy-worker-*.toml` 分别定义：
 
-- agent types: `workbuddy_worker`、`workbuddy_worker_glm52`、`workbuddy_worker_minimax_m3`、`workbuddy_worker_kimi_k27`
+- agent types: `workbuddy_worker_hy3`、`workbuddy_worker_glm52`、`workbuddy_worker_minimax_m3`、`workbuddy_worker_kimi_k27`
 - provider: `workbuddy_local`
 - models: `hy3`、`glm-5.2`、`minimax-m3`、`kimi-k2.7`
 - base_url: `http://127.0.0.1:17891/v1`
@@ -62,7 +62,7 @@ native worker 当前只支持只读 plan；明确授权的写操作仍走独立�
 
 | 路径 | 用途 |
 | --- | --- |
-| `agents/workbuddy-worker.toml` | Codex custom agent |
+| `agents/workbuddy-worker-hy3.toml` | Hy3 Codex custom agent |
 | `agents/workbuddy-worker-glm52.toml` / `workbuddy-worker-minimax-m3.toml` / `workbuddy-worker-kimi-k27.toml` | 其他模型绑定的 Codex custom agents |
 | `config/workbuddy-worker-routing.json` / `scripts/resolve-worker.mjs` | profile、模型与 task alias 路由 |
 | `skills/use-workbuddy-worker/SKILL.md` | 父 Agent 按需加载的委派协议 |

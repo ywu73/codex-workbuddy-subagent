@@ -6,7 +6,7 @@ native workers for bounded local analysis or confirmed scoped file edits. The
 WorkBuddy Bridge remains a separate optional MCP capability for parent-side
 direct delegation.
 
-The four `workbuddy_worker*` types are native Codex children that receive a
+The four model-labelled WorkBuddy types are native Codex children that receive a
 one-shot plaintext assignment through a trusted `SubagentStart` Hook. Each
 standalone TOML binds one model to the local adapter, which starts WorkBuddy
 ACP/CLI to complete the task.
@@ -43,9 +43,10 @@ Ask Codex to read and follow
 repository. The installer adds:
 
 - four standalone agent TOMLs bound to the selected models
+- Codex UI-visible agent types: `workbuddy_worker_hy3`, `workbuddy_worker_glm52`, `workbuddy_worker_minimax_m3`, and `workbuddy_worker_kimi_k27`
 - `<codex-home>/skills/use-workbuddy-worker/`
 - `<codex-home>/hooks/codex-workbuddy-subagent/plaintext_handoff.py`
-- one `SubagentStart` Hook matching the four `workbuddy_worker*` types
+- one `SubagentStart` Hook matching the four model-labelled WorkBuddy types
 - a routing config and resolver for explicit profile/model selection
 - a marked `$use-workbuddy-worker` index in the personal `AGENTS.md`
 
@@ -56,7 +57,7 @@ The WorkBuddy Bridge MCP plugin must also be installed and
 ### 3. Trust the Hook, then test
 
 1. Enter `/hooks` in Codex and confirm the Hook matches only the four
-   `workbuddy_worker*` types
+   model-labelled WorkBuddy types
    and points to the installed `plaintext_handoff.py`, then trust it.
 2. Start a new Codex task.
 3. Ask the new task to follow
@@ -76,7 +77,7 @@ The quick smoke passes only when all of these are true:
 
 ## File boundaries
 
-- `agents/workbuddy-worker.toml`: child session configuration.
+- `agents/workbuddy-worker-hy3.toml`: Hy3 child session configuration.
 - `skills/use-workbuddy-worker/SKILL.md`: parent-side delegation protocol.
 - `hooks/plaintext_handoff.py`: stage and `SubagentStart` Hook.
 - `mcp-server/`: WorkBuddy Bridge execution layer for `codebuddy` invocation,

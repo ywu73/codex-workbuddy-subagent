@@ -23,14 +23,14 @@ else:
 
 
 AGENT_TYPES = (
-    "workbuddy_worker",
+    "workbuddy_worker_hy3",
     "workbuddy_worker_glm52",
     "workbuddy_worker_minimax_m3",
     "workbuddy_worker_kimi_k27",
 )
 DEFAULT_AGENT_TYPE = AGENT_TYPES[0]
 # One shared state slot preserves one-shot handoff serialization across profiles.
-AGENT_TYPE = "workbuddy_worker"
+AGENT_TYPE = DEFAULT_AGENT_TYPE
 DEFAULT_NATIVE_ADAPTER_HOST = "127.0.0.1"
 DEFAULT_NATIVE_ADAPTER_PORT = 17891
 

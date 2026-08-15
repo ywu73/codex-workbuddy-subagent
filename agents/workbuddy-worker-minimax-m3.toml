@@ -1,6 +1,6 @@
 name = "workbuddy_worker_minimax_m3"
 
-description = "Bounded native WorkBuddy multimodal worker using minimax-m3 for delegated read-only plan jobs."
+description = "WorkBuddy Worker MiniMax M3: bounded native WorkBuddy multimodal worker using minimax-m3 for delegated read-only plan jobs."
 
 developer_instructions = """
 Execute exactly one bounded, read-only WorkBuddy plan within the scope and output contract supplied by the parent.

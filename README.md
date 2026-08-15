@@ -2,7 +2,7 @@
 
 让 Codex 主任务继续使用当前模型/provider，同时把 WorkBuddy `codebuddy` CLI 通过本地 Responses-to-ACP adapter 作为四个可选的原生 worker 使用，用于边界明确的本地分析或已经确认的受限文件编辑。本仓库复用原生 child + one-shot Hook 架构，并将 WorkBuddy Bridge 作为父任务直接委派的独立 MCP 能力保留。
 
-四个 `workbuddy_worker*` agent type 都是 Codex 原生 child，通过受信任的 `SubagentStart` Hook 接收父 Agent 的一次性 plaintext assignment；每个 standalone TOML 固定一个模型，provider 指向本地 adapter，由 adapter 启动 WorkBuddy ACP/CLI 完成任务。
+四个带模型标识的 WorkBuddy agent type 都是 Codex 原生 child，通过受信任的 `SubagentStart` Hook 接收父 Agent 的一次性 plaintext assignment；每个 standalone TOML 固定一个模型，provider 指向本地 adapter，由 adapter 启动 WorkBuddy ACP/CLI 完成任务。
 
 当前默认模型为 `hy3`，可选模型为 `hy3`、`glm-5.2`、`minimax-m3`、`kimi-k2.7`；其中后两个 profile 允许在 ACP capability negotiation 成功后传递图片。native adapter 默认监听 `127.0.0.1:17891`。
 
@@ -44,11 +44,12 @@ adapter 提供 `http://127.0.0.1:17891/v1/responses` 和 `/healthz`，内部通�
 
 把 [prompts/install-with-codex.md](prompts/install-with-codex.md) 交给 Codex 执行。安装会新增：
 
-- `<codex-home>/agents/workbuddy-worker*.toml`（四个模型绑定的 agent 文件）
+- `<codex-home>/agents/workbuddy-worker-*.toml`（四个模型绑定的 agent 文件）
 - `<codex-home>/skills/use-workbuddy-worker/`
 - `<codex-home>/hooks/codex-workbuddy-subagent/plaintext_handoff.py`
 - 四个独立 agent TOML，分别绑定 `hy3`、`glm-5.2`、`minimax-m3`、`kimi-k2.7`
-- 一条 `SubagentStart` Hook，matcher 覆盖四个 `workbuddy_worker*` agent type
+- Codex UI 中可直接选择的类型：`workbuddy_worker_hy3`、`workbuddy_worker_glm52`、`workbuddy_worker_minimax_m3`、`workbuddy_worker_kimi_k27`
+- 一条 `SubagentStart` Hook，matcher 覆盖四个带模型标识的 agent type
 - 一个 `workbuddy-worker-routing.json` 和 resolver，用于主 Agent 显式选择 profile/model
 - 个人 `AGENTS.md` 中带 marker 的 `$use-workbuddy-worker` 索引
 
@@ -56,7 +57,7 @@ adapter 提供 `http://127.0.0.1:17891/v1/responses` 和 `/healthz`，内部通�
 
 ### 3. 信任 Hook 并测试
 
-1. 在 Codex 输入 `/hooks`，确认它只匹配四个 `workbuddy_worker*` 类型，命令指向刚安装的 `plaintext_handoff.py`，然后信任。
+1. 在 Codex 输入 `/hooks`，确认它只匹配 `workbuddy_worker_hy3`、`workbuddy_worker_glm52`、`workbuddy_worker_minimax_m3`、`workbuddy_worker_kimi_k27`，命令指向刚安装的 `plaintext_handoff.py`，然后信任。
 2. 新开一个 Codex 任务。
 3. 把 [prompts/quick-smoke-test.md](prompts/quick-smoke-test.md) 交给新任务。
 
@@ -76,7 +77,7 @@ Native 快速测试应同时满足：
 
 ## 文件边界
 
-- `agents/workbuddy-worker.toml`：child session 配置。
+- `agents/workbuddy-worker-hy3.toml`：Hy3 child session 配置。
 - `skills/use-workbuddy-worker/SKILL.md`：父 Agent 按需加载的委派协议。
 - `hooks/plaintext_handoff.py`：stage 与 `SubagentStart` Hook。
 - `mcp-server/src/native-provider.ts`：Responses-to-ACP native provider adapter。

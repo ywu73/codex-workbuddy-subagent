@@ -2,13 +2,13 @@
 
 Copy the prompt below into a Codex task whose workspace is this repository.
 It installs the native WorkBuddy Responses-to-ACP adapter and four native
-WorkBuddy custom subagents, their lazy-loaded handoff skill, and their
+model-labelled WorkBuddy custom subagents, their lazy-loaded handoff skill, and their
 one-shot plaintext task Hook while preserving the current main-agent model and
 provider. The WorkBuddy Bridge MCP plugin remains optional for parent-side
 direct delegation.
 
 ```text
-Install the native model-selectable WorkBuddy custom subagents from this repository into
+Install the native model-labelled WorkBuddy custom subagents from this repository into
 my personal Codex configuration. If parent-side direct WorkBuddy delegation is
 also wanted, install the optional WorkBuddy Bridge MCP plugin from the local
 marketplace. Use the repository checkout as the source.
@@ -56,12 +56,19 @@ Then install the native subagent:
 6. Inspect the target agents directory, any existing WorkBuddy worker files,
    the use-workbuddy-worker skill directory, the personal AGENTS.md, user
    hooks.json, inline Hook configuration, and hooks directory.
+   If the legacy `workbuddy-worker.toml` declares the generic
+   `workbuddy_worker` identity from this repository, treat it as the file being
+   migrated; preserve any unrelated agent with the same path instead of
+   deleting it.
 7. Install these four agent files from the repository checkout, preserving the
    model binding in each standalone TOML:
-   - `<codex-home>/agents/workbuddy-worker.toml` (`workbuddy_worker` / `hy3`)
+   - `<codex-home>/agents/workbuddy-worker-hy3.toml` (`workbuddy_worker_hy3` / `hy3`)
    - `<codex-home>/agents/workbuddy-worker-glm52.toml` (`workbuddy_worker_glm52` / `glm-5.2`)
    - `<codex-home>/agents/workbuddy-worker-minimax-m3.toml` (`workbuddy_worker_minimax_m3` / `minimax-m3`)
    - `<codex-home>/agents/workbuddy-worker-kimi-k27.toml` (`workbuddy_worker_kimi_k27` / `kimi-k2.7`)
+   Remove the matching legacy `workbuddy-worker.toml` only after confirming it
+   declares `name = "workbuddy_worker"`; the generic type must not remain
+   registered alongside the model-labelled types.
 8. Install skills/use-workbuddy-worker including its SKILL.md and
    references/bridge-v1.md.
 9. Install the platform handoff script under
@@ -71,7 +78,7 @@ Then install the native subagent:
    - Install scripts/resolve-worker.mjs and config/workbuddy-worker-routing.json
      in the same directory for parent-side model/profile resolution.
 10. Install one SubagentStart command Hook whose matcher is
-   ^(workbuddy_worker|workbuddy_worker_glm52|workbuddy_worker_minimax_m3|workbuddy_worker_kimi_k27)$,
+   ^(workbuddy_worker_hy3|workbuddy_worker_glm52|workbuddy_worker_minimax_m3|workbuddy_worker_kimi_k27)$,
    timeout 10 seconds, additionalContextLimit 0,
    command invokes the script in hook mode.
 11. Merge snippets/AGENTS.md into the personal AGENTS.md once.

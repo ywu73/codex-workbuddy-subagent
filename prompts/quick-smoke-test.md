@@ -32,7 +32,7 @@ Do not ask for credentials or display their values.
    python3 "<codex-home>/hooks/codex-workbuddy-subagent/plaintext_handoff.py" --mode stage
 
 4. Resolve and spawn the exact agent type returned by the resolver (use
-   `workbuddy_worker` / `hy3` for this text smoke) with a unique task name and
+   `workbuddy_worker_hy3` / `hy3` for this text smoke) with a unique task name and
    fork_turns="none". The staged `--agent-type` and spawned agent type must
    match exactly.
 

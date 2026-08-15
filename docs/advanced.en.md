@@ -3,7 +3,7 @@
 ## Composition boundary
 
 The Codex main task keeps its current model, provider, and login. The four
-`workbuddy_worker*` types are native Codex children that receive a one-shot plaintext
+model-labelled WorkBuddy types are native Codex children that receive a one-shot plaintext
 assignment through a trusted `SubagentStart` Hook. Its provider points to a
 local Responses-to-ACP adapter, which launches the WorkBuddy `codebuddy` CLI.
 
@@ -26,7 +26,7 @@ cross-provider representation problem and delivering each task at most once.
    `task_spec`, scope, marker, and output contract.
 2. It stages the assignment through stdin into a single-slot local state.
 3. It resolves a profile/model and creates a native child with the exact
-   returned `workbuddy_worker*` role and `fork_turns="none"`.
+   returned model-labelled WorkBuddy role and `fork_turns="none"`.
 4. The trusted Hook atomically claims the assignment and injects it as developer
    context.
 5. The native provider adapter launches `codebuddy --acp --acp-transport stdio`.
@@ -36,9 +36,9 @@ cross-provider representation problem and delivering each task at most once.
 
 ## Agent configuration
 
-The four `agents/workbuddy-worker*.toml` files define:
+The four `agents/workbuddy-worker-*.toml` files define:
 
-- agent types: `workbuddy_worker`, `workbuddy_worker_glm52`,
+- agent types: `workbuddy_worker_hy3`, `workbuddy_worker_glm52`,
   `workbuddy_worker_minimax_m3`, and `workbuddy_worker_kimi_k27`
 - provider: `workbuddy_local`
 - models: `hy3`, `glm-5.2`, `minimax-m3`, and `kimi-k2.7`
@@ -65,7 +65,7 @@ Bridge execute path under its scope guard.
 
 | Path | Purpose |
 | --- | --- |
-| `agents/workbuddy-worker.toml` | Codex custom agent |
+| `agents/workbuddy-worker-hy3.toml` | Hy3 Codex custom agent |
 | `agents/workbuddy-worker-glm52.toml`, `workbuddy-worker-minimax-m3.toml`, `workbuddy-worker-kimi-k27.toml` | Additional model-bound agents |
 | `config/workbuddy-worker-routing.json`, `scripts/resolve-worker.mjs` | Profile/model/task routing |
 | `skills/use-workbuddy-worker/SKILL.md` | Parent-side delegation protocol |

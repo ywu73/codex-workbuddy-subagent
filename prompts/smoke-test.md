@@ -25,7 +25,7 @@ Bridge or OpenCode as a substitute.
    - marker: <fresh marker>
 
 3. Resolve the default `hy3` profile, stage with
-   `--agent-type workbuddy_worker`, then spawn that exact agent type with a
+   `--agent-type workbuddy_worker_hy3`, then spawn that exact agent type with a
    unique name and `fork_turns="none"`; wait through callback.
 
 4. Pass only if the child returns the exact fresh marker once, the WorkBuddy

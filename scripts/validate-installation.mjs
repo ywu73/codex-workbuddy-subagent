@@ -8,7 +8,7 @@ const checks = {};
 
 try {
   const agents = [
-    ["workbuddy-worker.toml", "workbuddy_worker", "hy3"],
+    ["workbuddy-worker-hy3.toml", "workbuddy_worker_hy3", "hy3"],
     ["workbuddy-worker-glm52.toml", "workbuddy_worker_glm52", "glm-5.2"],
     ["workbuddy-worker-minimax-m3.toml", "workbuddy_worker_minimax_m3", "minimax-m3"],
     ["workbuddy-worker-kimi-k27.toml", "workbuddy_worker_kimi_k27", "kimi-k2.7"],
@@ -39,7 +39,9 @@ try {
   const handoff = readFileSync(path.join(hookDir, "plaintext_handoff.py"), "utf8");
   const resolver = readFileSync(path.join(hookDir, "resolve-worker.mjs"), "utf8");
   const routing = readFileSync(path.join(hookDir, "workbuddy-worker-routing.json"), "utf8");
-  checks.hook_script_installed = handoff.includes("workbuddy_worker_kimi_k27");
+  checks.hook_script_installed =
+    handoff.includes("workbuddy_worker_hy3") &&
+    handoff.includes("workbuddy_worker_kimi_k27");
   checks.worker_routing_installed = resolver.includes("workbuddy-worker-routing.json") && routing.includes("kimi-k2.7");
 } catch {
   checks.hook_script_installed = false;
@@ -59,6 +61,7 @@ try {
     }
   }
   checks.hook_registered =
+    hooksText.includes("workbuddy_worker_hy3") &&
     hooksText.includes("workbuddy_worker_glm52") &&
     hooksText.includes("workbuddy_worker_minimax_m3") &&
     hooksText.includes("workbuddy_worker_kimi_k27") &&

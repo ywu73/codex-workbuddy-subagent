@@ -1,6 +1,6 @@
 ---
 name: use-workbuddy-worker
-description: Use one of the native WorkBuddy-backed model-selectable workers through the installed one-shot plaintext SubagentStart Hook and local Responses-to-ACP provider adapter. Use whenever Codex considers spawning, continuing, or troubleshooting these workers; it governs model selection, plaintext staging of a single bounded assignment, native fork_turns=none spawning and return, one-shot state recovery, and WorkBuddy safety boundaries.
+description: Use one of the native WorkBuddy-backed model-labelled workers through the installed one-shot plaintext SubagentStart Hook and local Responses-to-ACP provider adapter. Use whenever Codex considers spawning, continuing, or troubleshooting these workers; it governs model selection, plaintext staging of a single bounded assignment, native fork_turns=none spawning and return, one-shot state recovery, and WorkBuddy safety boundaries.
 ---
 
 # Use WorkBuddy Worker
@@ -9,7 +9,7 @@ description: Use one of the native WorkBuddy-backed model-selectable workers thr
 
 Available native worker profiles are:
 
-- `workbuddy_worker` -> `hy3` (default text profile)
+- `workbuddy_worker_hy3` -> `hy3` (default text profile)
 - `workbuddy_worker_glm52` -> `glm-5.2` (reasoning-heavy text profile)
 - `workbuddy_worker_minimax_m3` -> `minimax-m3` (multimodal profile)
 - `workbuddy_worker_kimi_k27` -> `kimi-k2.7` (multimodal profile)

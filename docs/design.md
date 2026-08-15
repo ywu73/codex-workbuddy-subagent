@@ -9,7 +9,7 @@ Bridge 1.0.1 as a separate parent-side delegation layer.
 
 ## Success criteria
 
-1. The four `workbuddy_worker*` profiles are discoverable in a new Codex task.
+1. The four model-labelled WorkBuddy profiles are discoverable in a new Codex task.
 2. A `fork_turns="none"` child receives the complete Hook-delivered assignment.
 3. The child provider reaches WorkBuddy ACP and returns the parent's exact
    random marker.
@@ -26,7 +26,7 @@ Codex main task
   -> $use-workbuddy-worker
   -> stage assignment
   -> resolve profile/model
-  -> spawn the exact returned workbuddy_worker* type, fork_turns="none"
+  -> spawn the exact returned model-labelled WorkBuddy type, fork_turns="none"
   -> SubagentStart Hook injects the assignment
   -> local WorkBuddy Responses adapter
   -> codebuddy ACP session with plan + Read
@@ -49,7 +49,7 @@ Key decisions:
 
 | Path | Purpose |
 | --- | --- |
-| `agents/workbuddy-worker.toml` | Codex custom agent |
+| `agents/workbuddy-worker-hy3.toml` | Hy3 Codex custom agent |
 | `skills/use-workbuddy-worker/SKILL.md` | Parent-side delegation protocol |
 | `hooks/plaintext_handoff.py` | POSIX stage/Hook script |
 | `prompts/install-with-codex.md` | Installation contract |

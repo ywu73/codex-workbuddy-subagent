@@ -8,21 +8,21 @@ param(
 
     [string]$StateDirectory,
 
-    [ValidateSet("workbuddy_worker", "workbuddy_worker_glm52", "workbuddy_worker_minimax_m3", "workbuddy_worker_kimi_k27")]
-    [string]$AgentType = "workbuddy_worker"
+    [ValidateSet("workbuddy_worker_hy3", "workbuddy_worker_glm52", "workbuddy_worker_minimax_m3", "workbuddy_worker_kimi_k27")]
+    [string]$AgentType = "workbuddy_worker_hy3"
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $supportedAgentTypes = @(
-    "workbuddy_worker",
+    "workbuddy_worker_hy3",
     "workbuddy_worker_glm52",
     "workbuddy_worker_minimax_m3",
     "workbuddy_worker_kimi_k27"
 )
 # One shared state slot preserves one-shot handoff serialization across profiles.
-$stateAgentType = "workbuddy_worker"
+$stateAgentType = "workbuddy_worker_hy3"
 $agentType = $stateAgentType
 $stateRoot = if ([string]::IsNullOrWhiteSpace($StateDirectory)) {
     Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "Codex\workbuddy-plaintext-handoff"

@@ -1,6 +1,6 @@
-name = "workbuddy_worker"
+name = "workbuddy_worker_hy3"
 
-description = "Bounded native WorkBuddy worker for delegated read-only plan jobs. Before spawning or continuing it, the parent should use $use-workbuddy-worker for the installed plaintext-Hook workflow."
+description = "WorkBuddy Worker Hy3: bounded native WorkBuddy worker for delegated read-only plan jobs. Before spawning or continuing it, the parent should use $use-workbuddy-worker for the installed plaintext-Hook workflow."
 
 developer_instructions = """
 Execute exactly one bounded, read-only WorkBuddy plan within the scope and output contract supplied by the parent.

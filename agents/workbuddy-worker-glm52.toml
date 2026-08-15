@@ -1,6 +1,6 @@
 name = "workbuddy_worker_glm52"
 
-description = "Bounded native WorkBuddy worker using glm-5.2 for delegated reasoning-heavy read-only plan jobs."
+description = "WorkBuddy Worker GLM 5.2: bounded native WorkBuddy worker using glm-5.2 for delegated reasoning-heavy read-only plan jobs."
 
 developer_instructions = """
 Execute exactly one bounded, read-only WorkBuddy plan within the scope and output contract supplied by the parent.

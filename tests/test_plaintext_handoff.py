@@ -37,7 +37,7 @@ def resolve_script():
 
 
 SCRIPT = resolve_script()
-AGENT_TYPE = "workbuddy_worker"
+AGENT_TYPE = "workbuddy_worker_hy3"
 GLM_AGENT_TYPE = "workbuddy_worker_glm52"
 
 
@@ -154,6 +154,18 @@ class PlaintextHandoffCliTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(f"spawned {GLM_AGENT_TYPE} child", result.stdout)
+
+    def test_stage_rejects_legacy_generic_agent_type(self):
+        result = self.invoke(
+            "stage",
+            "The legacy generic type must not be registered.",
+            "--agent-type",
+            "workbuddy_worker",
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertFalse(self.pending_path.exists())
 
     def test_hook_quarantines_a_handoff_for_a_different_agent_type(self):
         self.write_pending(envelope("profile-specific assignment", agent_type=GLM_AGENT_TYPE))
