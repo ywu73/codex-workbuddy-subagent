@@ -1,13 +1,17 @@
 # Quick smoke test
 
 Run this from any new Codex task after the Hook has been reviewed and trusted.
-No repository checkout is required. The test makes one small WorkBuddy call.
+The Hook will start the native adapter on demand if it is not already listening
+on `127.0.0.1:17891`. No repository checkout is required. The test makes one
+small WorkBuddy call.
 
 ```text
-Test the installed WorkBuddy subagent through the installed Hook path.
+Test the installed native WorkBuddy subagent through the installed Hook path.
 Do not ask for credentials or display their values.
 
-1. Load $use-workbuddy-worker. In parent-owned execution state, generate a
+1. Optionally verify `GET http://127.0.0.1:17891/healthz` reports `status=ready`.
+
+2. Load $use-workbuddy-worker. In parent-owned execution state, generate a
    fresh unpredictable marker and build one child assignment as a JSON object:
    {
      "operation": "plan",
@@ -24,20 +28,22 @@ Do not ask for credentials or display their values.
      "marker": "<the fresh marker>"
    }
 
-2. Stage that assignment through the installed plaintext handoff script:
+3. Stage that assignment through the installed plaintext handoff script:
    python3 "<codex-home>/hooks/codex-workbuddy-subagent/plaintext_handoff.py" --mode stage
 
-3. Spawn the exact agent type workbuddy_worker with a unique task name and
-   fork_turns="none".
+4. Resolve and spawn the exact agent type returned by the resolver (use
+   `workbuddy_worker` / `hy3` for this text smoke) with a unique task name and
+   fork_turns="none". The staged `--agent-type` and spawned agent type must
+   match exactly.
 
-4. Use one native task-sized idle wait or callback.
+5. Use one native task-sized idle wait or callback.
 
-5. Pass only if a distinct workbuddy_worker child returns the exact fresh
-   marker once, the child response shows a successful workbuddy_plan
-   invocation, the pending handoff is consumed, and the parent model/provider
-   configuration remains unchanged.
+6. Pass only if a distinct selected WorkBuddy child returns the exact fresh
+   marker once, the child is served by the local WorkBuddy provider, the
+   pending handoff is consumed, and the parent model/provider configuration
+   remains unchanged.
 
-Do not use inherited-context fallback, direct WorkBuddy CLI invocations, or
-another provider. If any boundary fails, report the exact failing boundary and
-stop.
+Do not use inherited-context fallback, `workbuddy_plan`, direct WorkBuddy CLI
+invocations, OpenCode, CC Switch, or another provider. If any boundary fails,
+report the exact failing boundary and stop.
 ```

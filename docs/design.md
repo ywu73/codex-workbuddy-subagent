@@ -4,19 +4,20 @@
 
 Model `codex-workbuddy-subagent` on `codex-deepseek-subagent` and
 `codex-opencode-agent`: expose the WorkBuddy `codebuddy` CLI as a native Codex
-subagent while keeping WorkBuddy Bridge 1.0.1 as the safety-critical execution
-layer.
+subagent through a local Responses-to-ACP adapter, while keeping WorkBuddy
+Bridge 1.0.1 as a separate parent-side delegation layer.
 
 ## Success criteria
 
-1. `workbuddy_worker` is discoverable in a new Codex task.
+1. The four `workbuddy_worker*` profiles are discoverable in a new Codex task.
 2. A `fork_turns="none"` child receives the complete Hook-delivered assignment.
-3. The child calls `workbuddy_plan` through the bridge and returns the parent's
-   exact random marker.
+3. The child provider reaches WorkBuddy ACP and returns the parent's exact
+   random marker.
 4. The one-shot pending handoff is consumed.
 5. The main task model/provider remains unchanged.
-6. Execute paths still enforce scope, worktree locks, audit, and approvals.
-7. No local shell fallback or direct API call fakes the result.
+6. Native plan paths remain read-only; execute paths use the separate Bridge
+   scope, worktree locks, audit, and approval controls.
+7. No OpenCode, CC Switch, 15721, or local shell fallback fakes the result.
 
 ## Architecture
 
@@ -24,21 +25,25 @@ layer.
 Codex main task
   -> $use-workbuddy-worker
   -> stage assignment
-  -> spawn workbuddy_worker, fork_turns="none"
+  -> resolve profile/model
+  -> spawn the exact returned workbuddy_worker* type, fork_turns="none"
   -> SubagentStart Hook injects the assignment
-  -> child calls WorkBuddy Bridge MCP tools
-  -> bridge launches codebuddy CLI with TaskSpec v1 and scope guard
-  -> child returns marker and ResultEnvelope v1
+  -> local WorkBuddy Responses adapter
+  -> codebuddy ACP session with plan + Read
+  -> child returns marker and provider result
   -> main task verifies and integrates
 ```
 
 Key decisions:
 
 - The agent TOML owns the child identity and a read-only sandbox.
+- `config/workbuddy-worker-routing.json` owns the model/profile allowlist and
+  selector aliases; the parent must stage and spawn the same resolved type.
 - The plaintext Hook protocol is reused from `codex-deepseek-subagent`.
-- The bridge remains the only path that invokes `codebuddy`.
-- `WORKBUDDY_CLI_PROXY` and `WORKBUDDY_CLI_MODEL` are local environment
-  overrides for network and model behavior.
+- The native adapter is the path that invokes `codebuddy` for native workers.
+- The Bridge remains the independent path for parent-side MCP delegation.
+- `WORKBUDDY_CLI_PROXY` is a local network override; model selection is bounded
+  to the four explicit WorkBuddy CLI IDs and defaults to `hy3`.
 
 ## Repository structure
 
@@ -67,7 +72,7 @@ Key decisions:
 | Risk | Handling |
 | --- | --- |
 | WorkBuddy CLI startup hangs on marketplace download | `WORKBUDDY_CLI_PROXY` routes downloads through a local proxy |
-| Default `auto` model rejected with 400 | Bridge always passes an explicit `WORKBUDDY_CLI_MODEL` |
+| Unsupported model requested | Native adapter rejects it against the four-model allowlist |
 | Cross-provider V2 ciphertext | Trusted `SubagentStart` Hook delivers the assignment |
 | Write safety | Execute only through bridge scope guard and explicit user confirmation |
 | Windows | Hook script is included; macOS/POSIX is the verified baseline |

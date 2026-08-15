@@ -2,7 +2,7 @@
 
 ## Credentials
 
-本仓库不要求也不存储 WorkBuddy API key。`workbuddy_worker` 的凭据来自 WorkBuddy
+本仓库不要求也不存储 WorkBuddy API key。四个 `workbuddy_worker*` 的凭据来自 WorkBuddy
 桌面端 / `codebuddy` CLI 的本地认证，不写入 Agent TOML、Hook、skill、assignment、
 聊天或 Issue。
 
@@ -11,9 +11,16 @@
 
 ## Data boundary
 
-`workbuddy_worker` 是独立的 Codex child session。父 Agent 通过 Hook 交付的
-assignment、child 上下文和工具结果会进入 WorkBuddy Bridge，再由 WorkBuddy CLI
-发送给其模型服务。主 Agent 仍使用当前模型/provider。
+四个 `workbuddy_worker*` 是独立的 Codex child session。父 Agent 通过 Hook 交付的
+assignment 进入本地 Responses-to-ACP adapter；adapter 再通过 WorkBuddy CLI 的
+ACP session 发送给 WorkBuddy 模型服务。主 Agent 仍使用当前模型/provider。
+
+WorkBuddy Bridge 是父任务直接委派时使用的另一条本地 MCP 路径，不是 native
+worker 的 provider；native child 不会调用 Bridge MCP 工具。
+
+Native adapter 只接受 `hy3`、`glm-5.2`、`minimax-m3`、`kimi-k2.7` 四个模型 ID。
+图片只允许随后两个 profile 传递，并且必须通过 ACP session 的 image prompt
+capability 协商；远程图片 URL 不会被 adapter 抓取。
 
 不要委派私密源码、密钥、个人数据或受监管材料，除非你已确认 WorkBuddy 及其模型
 服务商的数据处理边界。
@@ -62,7 +69,7 @@ WorkBuddy Bridge 是本地 MCP server，执行 `codebuddy` 时遵循：
 ```toml
 [mcp_servers.workbuddy-bridge.env]
 WORKBUDDY_CLI_PROXY = "http://127.0.0.1:7892"
-WORKBUDDY_CLI_MODEL = "hy3"
+WORKBUDDY_CLI_MODEL = "hy3" # allowlist: hy3 / glm-5.2 / minimax-m3 / kimi-k2.7
 ```
 
 ## Cost

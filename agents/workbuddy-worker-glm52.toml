@@ -1,6 +1,6 @@
-name = "workbuddy_worker"
+name = "workbuddy_worker_glm52"
 
-description = "Bounded native WorkBuddy worker for delegated read-only plan jobs. Before spawning or continuing it, the parent should use $use-workbuddy-worker for the installed plaintext-Hook workflow."
+description = "Bounded native WorkBuddy worker using glm-5.2 for delegated reasoning-heavy read-only plan jobs."
 
 developer_instructions = """
 Execute exactly one bounded, read-only WorkBuddy plan within the scope and output contract supplied by the parent.
@@ -19,7 +19,7 @@ The native WorkBuddy adapter enforces the provider boundary and starts WorkBuddy
 """
 
 model_provider = "workbuddy_local"
-model = "hy3"
+model = "glm-5.2"
 model_context_window = 1000000
 sandbox_mode = "read-only"
 

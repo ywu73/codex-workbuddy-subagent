@@ -7,8 +7,13 @@ import json
 import os
 import pathlib
 import re
+import shutil
+import subprocess
 import sys
+import time
 from typing import Optional, Tuple
+import urllib.error
+import urllib.request
 import uuid
 
 if os.name == "posix":
@@ -17,7 +22,17 @@ else:
     fcntl = None
 
 
+AGENT_TYPES = (
+    "workbuddy_worker",
+    "workbuddy_worker_glm52",
+    "workbuddy_worker_minimax_m3",
+    "workbuddy_worker_kimi_k27",
+)
+DEFAULT_AGENT_TYPE = AGENT_TYPES[0]
+# One shared state slot preserves one-shot handoff serialization across profiles.
 AGENT_TYPE = "workbuddy_worker"
+DEFAULT_NATIVE_ADAPTER_HOST = "127.0.0.1"
+DEFAULT_NATIVE_ADAPTER_PORT = 17891
 
 
 class EnvelopeError(ValueError):
@@ -44,6 +59,125 @@ def fail(message: str, code: int) -> None:
 
 def transport_failure(action: str, error: OSError) -> None:
     fail(f"Plaintext handoff transport failure while {action}: {error}", 12)
+
+
+def native_adapter_autostart_enabled() -> bool:
+    value = os.environ.get("WORKBUDDY_NATIVE_ADAPTER_AUTOSTART", "1").strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def native_adapter_endpoint() -> Tuple[str, int]:
+    host = os.environ.get("WORKBUDDY_NATIVE_ADAPTER_HOST", DEFAULT_NATIVE_ADAPTER_HOST)
+    if host != DEFAULT_NATIVE_ADAPTER_HOST:
+        fail("WORKBUDDY_NATIVE_ADAPTER_HOST must remain 127.0.0.1 for the native worker.", 12)
+    try:
+        port = int(os.environ.get("WORKBUDDY_NATIVE_ADAPTER_PORT", str(DEFAULT_NATIVE_ADAPTER_PORT)))
+    except ValueError:
+        fail("WORKBUDDY_NATIVE_ADAPTER_PORT must be an integer.", 12)
+    if not 1 <= port <= 65535:
+        fail("WORKBUDDY_NATIVE_ADAPTER_PORT must be between 1 and 65535.", 12)
+    return host, port
+
+
+def native_adapter_ready(host: str, port: int) -> bool:
+    request = urllib.request.Request(f"http://{host}:{port}/healthz", method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=0.25) as response:
+            if response.status != 200:
+                return False
+            value = json.loads(response.read().decode("utf-8"))
+            return isinstance(value, dict) and value.get("status") == "ready"
+    except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
+        return False
+
+
+def native_adapter_script() -> pathlib.Path:
+    configured = os.environ.get("WORKBUDDY_NATIVE_ADAPTER_PATH")
+    if configured:
+        return pathlib.Path(configured).expanduser().resolve()
+    return pathlib.Path(__file__).resolve().parents[1] / "mcp-server" / "dist" / "src" / "native-provider.js"
+
+
+def ensure_native_adapter(root: pathlib.Path, hook_input: dict) -> None:
+    if not native_adapter_autostart_enabled():
+        return
+    host, port = native_adapter_endpoint()
+    if native_adapter_ready(host, port):
+        return
+
+    script = native_adapter_script()
+    if not script.is_file():
+        fail(
+            f"The native WorkBuddy adapter is not built: {script}. Run npm run build in mcp-server.",
+            12,
+        )
+    node = os.environ.get("WORKBUDDY_NATIVE_NODE") or shutil.which("node")
+    if not node:
+        fail("Node.js is required to start the native WorkBuddy adapter.", 12)
+    raw_cwd = hook_input.get("cwd") or hook_input.get("workdir") or os.getcwd()
+    if not isinstance(raw_cwd, str) or not raw_cwd.strip():
+        fail("The native WorkBuddy adapter requires the child workspace cwd.", 12)
+    cwd = pathlib.Path(raw_cwd).expanduser().resolve()
+    if not cwd.is_dir():
+        fail(f"The native WorkBuddy adapter cwd does not exist: {cwd}", 12)
+
+    log_path = root / "workbuddy-native-adapter.log"
+    try:
+        root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        root.chmod(0o700)
+        log_stream = log_path.open("a", encoding="utf-8")
+        os.chmod(log_path, 0o600)
+    except OSError as error:
+        transport_failure("opening the native adapter log", error)
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "WORKBUDDY_NATIVE_ADAPTER_HOST": host,
+            "WORKBUDDY_NATIVE_ADAPTER_PORT": str(port),
+            "WORKBUDDY_NATIVE_CWD": str(cwd),
+        }
+    )
+    try:
+        process = subprocess.Popen(
+            [node, str(script)],
+            cwd=str(cwd),
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=log_stream,
+            stderr=subprocess.STDOUT,
+            start_new_session=os.name == "posix",
+        )
+    except OSError as error:
+        log_stream.close()
+        transport_failure("starting the native adapter", error)
+    finally:
+        log_stream.close()
+
+    try:
+        start_timeout = float(os.environ.get("WORKBUDDY_NATIVE_ADAPTER_START_TIMEOUT", "8"))
+    except ValueError:
+        fail("WORKBUDDY_NATIVE_ADAPTER_START_TIMEOUT must be a number of seconds.", 12)
+    if start_timeout <= 0:
+        fail("WORKBUDDY_NATIVE_ADAPTER_START_TIMEOUT must be positive.", 12)
+    deadline = time.monotonic() + start_timeout
+    while time.monotonic() < deadline:
+        if native_adapter_ready(host, port):
+            return
+        if process.poll() is not None:
+            break
+        time.sleep(0.1)
+
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            process.kill()
+    fail(
+        f"The native WorkBuddy adapter did not become ready; inspect {log_path}.",
+        12,
+    )
 
 
 @contextlib.contextmanager
@@ -88,7 +222,7 @@ def validate_envelope(value: object) -> Tuple[dict, datetime.datetime]:
         raise EnvelopeError("the handoff envelope must be a JSON object")
     if type(value.get("schema")) is not int or value["schema"] != 1:
         raise EnvelopeError("the handoff envelope has an invalid schema")
-    if value.get("agent_type") != AGENT_TYPE:
+    if value.get("agent_type") not in AGENT_TYPES:
         raise EnvelopeError("the handoff envelope has an invalid agent type")
     if not isinstance(value.get("handoff_id"), str) or not value["handoff_id"]:
         raise EnvelopeError("the handoff envelope has an invalid handoff id")
@@ -141,7 +275,7 @@ def reconcile_claims(root: pathlib.Path, now: datetime.datetime) -> None:
             transport_failure("cleaning an expired claim", error)
 
 
-def stage_locked(root: pathlib.Path, ttl_seconds: int, assignment: str) -> Tuple[dict, pathlib.Path]:
+def stage_locked(root: pathlib.Path, ttl_seconds: int, assignment: str, agent_type: str) -> Tuple[dict, pathlib.Path]:
     pending = root / f"{AGENT_TYPE}.pending.json"
     now = datetime.datetime.now(datetime.timezone.utc)
     replace_expired = False
@@ -168,7 +302,7 @@ def stage_locked(root: pathlib.Path, ttl_seconds: int, assignment: str) -> Tuple
     envelope = {
         "schema": 1,
         "handoff_id": str(uuid.uuid4()),
-        "agent_type": AGENT_TYPE,
+        "agent_type": agent_type,
         "created_at": now.isoformat(),
         "expires_at": (now + datetime.timedelta(seconds=ttl_seconds)).isoformat(),
         "assignment": assignment,
@@ -205,19 +339,19 @@ def stage_locked(root: pathlib.Path, ttl_seconds: int, assignment: str) -> Tuple
     return envelope, pending
 
 
-def stage(root: pathlib.Path, ttl_seconds: int) -> None:
+def stage(root: pathlib.Path, ttl_seconds: int, agent_type: str) -> None:
     assignment = sys.stdin.read()
     if not assignment.strip():
         fail("Refusing to stage an empty focused WorkBuddy assignment.", 2)
 
     with state_lock(root):
-        envelope, pending = stage_locked(root, ttl_seconds, assignment)
+        envelope, pending = stage_locked(root, ttl_seconds, assignment, agent_type)
 
     json.dump(
         {
             "staged": True,
             "handoff_id": envelope["handoff_id"],
-            "agent_type": AGENT_TYPE,
+            "agent_type": agent_type,
             "expires_at": envelope["expires_at"],
             "pending_path": str(pending),
         },
@@ -236,6 +370,7 @@ def run_target_hook_locked(root: pathlib.Path, hook_input: dict) -> None:
         fail("A plaintext handoff is already claimed or quarantined for a workbuddy_worker.", 11)
     if not pending.exists():
         fail("No plaintext handoff was available for the workbuddy_worker start.", 10)
+    ensure_native_adapter(root, hook_input)
     agent_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(hook_input.get("agent_id") or uuid.uuid4().hex))
     claimed = root / f"{AGENT_TYPE}.claimed.{agent_id}.{uuid.uuid4().hex}.json"
     try:
@@ -257,6 +392,14 @@ def run_target_hook_locked(root: pathlib.Path, hook_input: dict) -> None:
         quarantine_claim(claimed, agent_id)
         fail("The pending focused WorkBuddy handoff is malformed or has an invalid schema.", 5)
 
+    if envelope["agent_type"] != hook_input.get("agent_type"):
+        quarantine_claim(claimed, agent_id)
+        fail(
+            f"The staged WorkBuddy handoff targets {envelope['agent_type']}, "
+            f"but the hook started {hook_input.get('agent_type')}.",
+            7,
+        )
+
     if expires_at <= now:
         try:
             claimed.unlink()
@@ -266,7 +409,7 @@ def run_target_hook_locked(root: pathlib.Path, hook_input: dict) -> None:
     assignment = envelope["assignment"]
 
     additional_context = (
-        "You are the spawned workbuddy_worker child, not the root agent. The parent supplied the complete task below "
+        f"You are the spawned {envelope['agent_type']} child, not the root agent. The parent supplied the complete task below "
         "through a one-time plaintext handoff because provider-internal collaboration ciphertext is not a reliable "
         "cross-provider task carrier. Treat this as the task contract. Do not continue the parent's unrelated work "
         "and do not report the assignment missing merely because the encrypted collaboration payload is unreadable.\n\n"
@@ -300,7 +443,7 @@ def run_hook(root: pathlib.Path) -> None:
         fail(f"SubagentStart hook input was invalid JSON: {error}", 4)
     if not isinstance(hook_input, dict):
         fail("SubagentStart hook input must be a JSON object.", 4)
-    if hook_input.get("hook_event_name") != "SubagentStart" or hook_input.get("agent_type") != AGENT_TYPE:
+    if hook_input.get("hook_event_name") != "SubagentStart" or hook_input.get("agent_type") not in AGENT_TYPES:
         return
 
     with state_lock(root):
@@ -312,12 +455,13 @@ def main() -> None:
     parser.add_argument("--mode", required=True, choices=("stage", "hook"))
     parser.add_argument("--ttl-seconds", type=int, default=300)
     parser.add_argument("--state-directory")
+    parser.add_argument("--agent-type", choices=AGENT_TYPES, default=DEFAULT_AGENT_TYPE)
     arguments = parser.parse_args()
     if not 1 <= arguments.ttl_seconds <= 3600:
         fail("--ttl-seconds must be between 1 and 3600.", 8)
     root = state_root(arguments.state_directory)
     if arguments.mode == "stage":
-        stage(root, arguments.ttl_seconds)
+        stage(root, arguments.ttl_seconds, arguments.agent_type)
         return
     run_hook(root)
 

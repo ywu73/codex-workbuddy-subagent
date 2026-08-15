@@ -10,6 +10,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && vitest run --exclude tests/workbuddy.e2e.test.ts",
+    "native-adapter": "node dist/src/native-provider.js",
     "test:protocol": "vitest run tests/protocol.test.ts",
     "test:stdio": "npm run build && vitest run tests/stdio.test.ts",
     "test:e2e": "WORKBUDDY_E2E=1 vitest run tests/workbuddy.e2e.test.ts"

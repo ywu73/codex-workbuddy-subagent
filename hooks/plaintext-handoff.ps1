@@ -6,13 +6,24 @@ param(
     [ValidateRange(1, 3600)]
     [int]$TtlSeconds = 300,
 
-    [string]$StateDirectory
+    [string]$StateDirectory,
+
+    [ValidateSet("workbuddy_worker", "workbuddy_worker_glm52", "workbuddy_worker_minimax_m3", "workbuddy_worker_kimi_k27")]
+    [string]$AgentType = "workbuddy_worker"
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$agentType = "workbuddy_worker"
+$supportedAgentTypes = @(
+    "workbuddy_worker",
+    "workbuddy_worker_glm52",
+    "workbuddy_worker_minimax_m3",
+    "workbuddy_worker_kimi_k27"
+)
+# One shared state slot preserves one-shot handoff serialization across profiles.
+$stateAgentType = "workbuddy_worker"
+$agentType = $stateAgentType
 $stateRoot = if ([string]::IsNullOrWhiteSpace($StateDirectory)) {
     Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "Codex\workbuddy-plaintext-handoff"
 } else {
@@ -77,7 +88,7 @@ function Test-HandoffEnvelope([object]$Value) {
         return [pscustomobject]@{ Valid = $false; Error = "the handoff envelope has an invalid schema" }
     }
     $envelopeAgentType = Get-JsonProperty $Value "agent_type"
-    if ($envelopeAgentType -isnot [string] -or $envelopeAgentType -ne $agentType) {
+    if ($envelopeAgentType -isnot [string] -or $envelopeAgentType -notin $supportedAgentTypes) {
         return [pscustomobject]@{ Valid = $false; Error = "the handoff envelope has an invalid agent type" }
     }
     $handoffID = Get-JsonProperty $Value "handoff_id"
@@ -256,7 +267,7 @@ function Publish-Handoff([object]$Handoff, [bool]$ReplaceExpired) {
     }
 }
 
-function Stage-Locked([string]$Assignment) {
+function Stage-Locked([string]$Assignment, [string]$SelectedAgentType) {
     Remove-ExpiredClaims
     if (@(Get-StateFiles "$agentType.claimed.*.json").Count -gt 0 -or @(Get-StateFiles "$agentType.failed.*.json").Count -gt 0) {
         Stop-Handoff "An workbuddy_worker handoff is already claimed or quarantined. Resolve it before staging another." 3
@@ -278,7 +289,7 @@ function Stage-Locked([string]$Assignment) {
     $handoff = [ordered]@{
         schema = 1
         handoff_id = [Guid]::NewGuid().ToString("D")
-        agent_type = $agentType
+        agent_type = $SelectedAgentType
         created_at = $now.ToString("O")
         expires_at = $now.AddSeconds($TtlSeconds).ToString("O")
         assignment = $Assignment
@@ -316,6 +327,12 @@ function Run-TargetHookLocked([object]$HookInput) {
         $null = Move-ToQuarantine $claimedPath $agentID
         Stop-Handoff "The pending WorkBuddy handoff is malformed or has an invalid schema." 5
     }
+    $envelopeAgentType = [string](Get-JsonProperty $validation.Value "agent_type")
+    $hookAgentType = [string](Get-JsonProperty $HookInput "agent_type")
+    if ($envelopeAgentType -ne $hookAgentType) {
+        $null = Move-ToQuarantine $claimedPath $agentID
+        Stop-Handoff "The staged WorkBuddy handoff targets $envelopeAgentType, but the hook started $hookAgentType." 7
+    }
     if ($validation.ExpiresAt -le [DateTimeOffset]::UtcNow) {
         try {
             [System.IO.File]::Delete($claimedPath)
@@ -326,8 +343,8 @@ function Run-TargetHookLocked([object]$HookInput) {
     }
 
     $assignment = [string](Get-JsonProperty $validation.Value "assignment")
-    $additionalContext = @"
-You are the spawned workbuddy_worker child, not the root agent. The parent supplied the complete task below through a one-time plaintext handoff because provider-internal collaboration ciphertext is not a reliable cross-provider task carrier. Treat this as the task contract. Do not continue the parent's unrelated work and do not report the assignment missing merely because the encrypted collaboration payload is unreadable.
+$additionalContext = @"
+You are the spawned $envelopeAgentType child, not the root agent. The parent supplied the complete task below through a one-time plaintext handoff because provider-internal collaboration ciphertext is not a reliable cross-provider task carrier. Treat this as the task contract. Do not continue the parent's unrelated work and do not report the assignment missing merely because the encrypted collaboration payload is unreadable.
 
 BEGIN PARENT ASSIGNMENT
 $assignment
@@ -361,11 +378,11 @@ try {
         if ([string]::IsNullOrWhiteSpace($assignment)) {
             Stop-Handoff "Refusing to stage an empty WorkBuddy assignment." 2
         }
-        $handoff = Invoke-WithStateLock { Stage-Locked $assignment }
+        $handoff = Invoke-WithStateLock { Stage-Locked $assignment $AgentType }
         Write-Json ([ordered]@{
             staged = $true
             handoff_id = $handoff.handoff_id
-            agent_type = $agentType
+            agent_type = $AgentType
             expires_at = $handoff.expires_at
             pending_path = $pendingPath
         })
@@ -387,7 +404,7 @@ try {
     if ($null -eq $hookInput -or $hookInput -is [System.Array]) {
         Stop-Handoff "SubagentStart hook input must be a JSON object." 4
     }
-    if ((Get-JsonProperty $hookInput "hook_event_name") -ne "SubagentStart" -or (Get-JsonProperty $hookInput "agent_type") -ne $agentType) {
+    if ((Get-JsonProperty $hookInput "hook_event_name") -ne "SubagentStart" -or (Get-JsonProperty $hookInput "agent_type") -notin $supportedAgentTypes) {
         exit 0
     }
 

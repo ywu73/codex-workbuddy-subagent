@@ -218,6 +218,7 @@ export class WorkBuddyService {
             "--tools", operation === "plan" ? "Read" : "Read,Write,Edit",
             "--max-turns", String(input.max_turns),
             "--no-session-persistence",
+            "--setting-sources", "user",
             "--strict-mcp-config",
           ];
           if (operation === "execute") {

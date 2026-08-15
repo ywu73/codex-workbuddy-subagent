@@ -2,12 +2,15 @@
 
 Run this from a new Codex task whose workspace is this repository, after the
 custom agent and the one-shot `SubagentStart` Hook have been installed and
-trusted. This test verifies Hook delivery, custom-agent discovery, native child
-creation, WorkBuddy Bridge availability, a read-only plan, and the native
-callback.
+trusted. The Hook starts the native adapter on demand at
+`http://127.0.0.1:17891` when needed.
+This test verifies adapter-backed WorkBuddy execution, Hook delivery,
+custom-agent discovery, native child creation, a read-only plan, and the
+native callback.
 
 ```text
-Run the repository native WorkBuddy subagent smoke test.
+Run the repository native WorkBuddy subagent smoke test. Do not call WorkBuddy
+Bridge or OpenCode as a substitute.
 
 1. As the root agent, generate a fresh unpredictable marker locally.
 
@@ -21,11 +24,12 @@ Run the repository native WorkBuddy subagent smoke test.
    - timeout_seconds: 120
    - marker: <fresh marker>
 
-3. Stage, spawn workbuddy_worker with unique name and fork_turns="none",
-   wait through callback.
+3. Resolve the default `hy3` profile, stage with
+   `--agent-type workbuddy_worker`, then spawn that exact agent type with a
+   unique name and `fork_turns="none"`; wait through callback.
 
-4. Pass only if the child returns the exact fresh marker once and a successful
-   workbuddy_plan result containing the fixture answer.
+4. Pass only if the child returns the exact fresh marker once, the WorkBuddy
+   provider returns the fixture answer, and the native callback completes.
 
 Expected fixture result:
 - Third non-empty line: responses

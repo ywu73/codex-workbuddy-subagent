@@ -38,6 +38,7 @@ def resolve_script():
 
 SCRIPT = resolve_script()
 AGENT_TYPE = "workbuddy_worker"
+GLM_AGENT_TYPE = "workbuddy_worker_glm52"
 
 
 def utc_timestamp(*, seconds_from_now=0):
@@ -76,6 +77,8 @@ class PlaintextHandoffCliTests(unittest.TestCase):
         return self.invoke_at(self.state_directory, mode, stdin, *extra_arguments)
 
     def invoke_at(self, state_directory, mode, stdin, *extra_arguments):
+        environment = os.environ.copy()
+        environment["WORKBUDDY_NATIVE_ADAPTER_AUTOSTART"] = "0"
         return subprocess.run(
             [
                 sys.executable,
@@ -90,6 +93,7 @@ class PlaintextHandoffCliTests(unittest.TestCase):
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=environment,
             check=False,
         )
 
@@ -97,11 +101,11 @@ class PlaintextHandoffCliTests(unittest.TestCase):
         self.state_directory.mkdir(parents=True, exist_ok=True)
         self.pending_path.write_text(json.dumps(value), encoding="utf-8")
 
-    def target_hook_input(self, agent_id="agent-1"):
+    def target_hook_input(self, agent_id="agent-1", agent_type=AGENT_TYPE):
         return json.dumps(
             {
                 "hook_event_name": "SubagentStart",
-                "agent_type": AGENT_TYPE,
+                "agent_type": agent_type,
                 "agent_id": agent_id,
             }
         )
@@ -137,6 +141,29 @@ class PlaintextHandoffCliTests(unittest.TestCase):
         self.assertEqual(output["hookEventName"], "SubagentStart")
         self.assertIn("BEGIN PARENT ASSIGNMENT\n" + assignment, output["additionalContext"])
         self.assertFalse(self.handoff_state_files())
+
+    def test_stage_and_hook_preserve_the_selected_agent_type(self):
+        result = self.invoke("stage", "Use the reasoning profile.", "--agent-type", GLM_AGENT_TYPE)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        staged = json.loads(self.pending_path.read_text(encoding="utf-8"))
+        self.assertEqual(staged["agent_type"], GLM_AGENT_TYPE)
+        self.assertEqual(json.loads(result.stdout)["agent_type"], GLM_AGENT_TYPE)
+
+        result = self.invoke("hook", self.target_hook_input(agent_type=GLM_AGENT_TYPE))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(f"spawned {GLM_AGENT_TYPE} child", result.stdout)
+
+    def test_hook_quarantines_a_handoff_for_a_different_agent_type(self):
+        self.write_pending(envelope("profile-specific assignment", agent_type=GLM_AGENT_TYPE))
+
+        result = self.invoke("hook", self.target_hook_input())
+
+        self.assertEqual(result.returncode, 7)
+        self.assertIn("targets workbuddy_worker_glm52", result.stderr)
+        self.assertFalse(self.pending_path.exists())
+        self.assertEqual(len(list(self.state_directory.glob(f"{AGENT_TYPE}.failed.*.json"))), 1)
 
     def test_hook_ignores_non_target_agents_without_consuming_pending(self):
         original = envelope()

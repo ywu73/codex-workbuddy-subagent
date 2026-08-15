@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "default_profile": "hy3",
+  "aliases": {
+    "default": "hy3",
+    "fast": "hy3",
+    "reasoning": "glm52",
+    "vision": "minimax_m3",
+    "multimodal": "kimi_k27"
+  },
+  "task_profiles": {
+    "read": "hy3",
+    "search": "hy3",
+    "reasoning": "glm52",
+    "image": "minimax_m3",
+    "multimodal": "kimi_k27"
+  },
+  "workers": {
+    "hy3": {
+      "agent_type": "workbuddy_worker",
+      "model": "hy3",
+      "model_provider": "workbuddy_local",
+      "base_url": "http://127.0.0.1:17891/v1",
+      "wire_api": "responses",
+      "model_context_window": 1000000,
+      "strengths": ["general delegated analysis", "fast read-only tasks"],
+      "avoid": ["image input"],
+      "cost_class": "default",
+      "status": "available",
+      "validation": {
+        "cli_model_id": "verified",
+        "native_text_smoke": "pending",
+        "native_image_smoke": "not_applicable"
+      }
+    },
+    "glm52": {
+      "agent_type": "workbuddy_worker_glm52",
+      "model": "glm-5.2",
+      "model_provider": "workbuddy_local",
+      "base_url": "http://127.0.0.1:17891/v1",
+      "wire_api": "responses",
+      "model_context_window": 1000000,
+      "strengths": ["reasoning-heavy delegated analysis", "structured review"],
+      "avoid": ["image input"],
+      "cost_class": "reasoning",
+      "status": "available",
+      "validation": {
+        "cli_model_id": "verified",
+        "native_text_smoke": "pending",
+        "native_image_smoke": "not_applicable"
+      }
+    },
+    "minimax_m3": {
+      "agent_type": "workbuddy_worker_minimax_m3",
+      "model": "minimax-m3",
+      "model_provider": "workbuddy_local",
+      "base_url": "http://127.0.0.1:17891/v1",
+      "wire_api": "responses",
+      "model_context_window": 1000000,
+      "strengths": ["multimodal analysis", "image-grounded review"],
+      "avoid": ["assuming image capability without ACP negotiation"],
+      "cost_class": "multimodal",
+      "status": "available",
+      "validation": {
+        "cli_model_id": "verified",
+        "native_text_smoke": "pending",
+        "native_image_smoke": "pending"
+      }
+    },
+    "kimi_k27": {
+      "agent_type": "workbuddy_worker_kimi_k27",
+      "model": "kimi-k2.7",
+      "model_provider": "workbuddy_local",
+      "base_url": "http://127.0.0.1:17891/v1",
+      "wire_api": "responses",
+      "model_context_window": 1000000,
+      "strengths": ["multimodal analysis", "long-form delegated review"],
+      "avoid": ["assuming image capability without ACP negotiation"],
+      "cost_class": "multimodal",
+      "status": "available",
+      "validation": {
+        "cli_model_id": "verified",
+        "native_text_smoke": "pending",
+        "native_image_smoke": "pending"
+      }
+    }
+  }
+}

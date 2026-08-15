@@ -7,13 +7,22 @@ const codexHome = process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
 const checks = {};
 
 try {
-  const agentPath = path.join(codexHome, "agents", "workbuddy-worker.toml");
-  const agent = readFileSync(agentPath, "utf8");
-  checks.agent_installed = agent.includes("workbuddy_worker");
-  checks.agent_has_provider = agent.includes("model_provider") && agent.includes("[model_providers.");
-  checks.agent_no_plaintext_key = !agent.includes("OPENCODE_API_KEY =") && (!agent.includes("experimental_bearer_token") || agent.includes('experimental_bearer_token = "PROXY_MANAGED"') || agent.includes("experimental_bearer_token = \"PROXY_MANAGED\""));
+  const agents = [
+    ["workbuddy-worker.toml", "workbuddy_worker", "hy3"],
+    ["workbuddy-worker-glm52.toml", "workbuddy_worker_glm52", "glm-5.2"],
+    ["workbuddy-worker-minimax-m3.toml", "workbuddy_worker_minimax_m3", "minimax-m3"],
+    ["workbuddy-worker-kimi-k27.toml", "workbuddy_worker_kimi_k27", "kimi-k2.7"],
+  ];
+  const contents = agents.map(([filename, agentType, model]) => {
+    const agent = readFileSync(path.join(codexHome, "agents", filename), "utf8");
+    return { agent, agentType, model };
+  });
+  checks.agents_installed = contents.every(({ agent, agentType, model }) => agent.includes(agentType) && agent.includes(`model = "${model}"`));
+  checks.agent_has_provider = contents.every(({ agent }) => agent.includes("model_provider") && agent.includes("[model_providers."));
+  checks.agent_native_provider = contents.every(({ agent }) => agent.includes('model_provider = "workbuddy_local"') && agent.includes('base_url = "http://127.0.0.1:17891/v1"'));
+  checks.agent_no_plaintext_key = contents.every(({ agent }) => !agent.includes("OPENCODE_API_KEY =") && (!agent.includes("experimental_bearer_token") || agent.includes('experimental_bearer_token = "PROXY_MANAGED"') || agent.includes("experimental_bearer_token = \"PROXY_MANAGED\"")));
 } catch (error) {
-  checks.agent_installed = false;
+  checks.agents_installed = false;
   checks.install_checks_failed = error.message;
 }
 
@@ -28,9 +37,13 @@ try {
 try {
   const hookDir = path.join(codexHome, "hooks", "codex-workbuddy-subagent");
   const handoff = readFileSync(path.join(hookDir, "plaintext_handoff.py"), "utf8");
-  checks.hook_script_installed = handoff.includes("workbuddy_worker");
+  const resolver = readFileSync(path.join(hookDir, "resolve-worker.mjs"), "utf8");
+  const routing = readFileSync(path.join(hookDir, "workbuddy-worker-routing.json"), "utf8");
+  checks.hook_script_installed = handoff.includes("workbuddy_worker_kimi_k27");
+  checks.worker_routing_installed = resolver.includes("workbuddy-worker-routing.json") && routing.includes("kimi-k2.7");
 } catch {
   checks.hook_script_installed = false;
+  checks.worker_routing_installed = false;
 }
 
 try {
@@ -46,7 +59,9 @@ try {
     }
   }
   checks.hook_registered =
-    hooksText.includes("^workbuddy_worker$") &&
+    hooksText.includes("workbuddy_worker_glm52") &&
+    hooksText.includes("workbuddy_worker_minimax_m3") &&
+    hooksText.includes("workbuddy_worker_kimi_k27") &&
     hooksText.includes("plaintext_handoff.py");
 } catch {
   checks.hook_registered = false;
@@ -61,7 +76,10 @@ try {
   checks.bridge_env_configured = false;
 }
 
-const ready = Object.values(checks).every(Boolean);
+const requiredChecks = Object.entries(checks)
+  .filter(([name]) => !name.startsWith("bridge_"))
+  .map(([, value]) => value);
+const ready = requiredChecks.every(Boolean);
 process.stdout.write(
   `${JSON.stringify(
     {

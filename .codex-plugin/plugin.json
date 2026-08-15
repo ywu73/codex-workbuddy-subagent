@@ -1,7 +1,7 @@
 {
   "name": "workbuddy-bridge",
   "version": "1.0.1+codex.20260810171607",
-  "description": "Delegate bounded, persistent, approval-gated local tasks from Codex to WorkBuddy. Also provides a native workbuddy_worker custom subagent with one-shot Hook delivery.",
+  "description": "Use selectable WorkBuddy models as native workers through a local Responses-to-ACP adapter, with optional bounded parent-side delegation through the WorkBuddy Bridge MCP server.",
   "author": {
     "name": "wuyi"
   },
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "WorkBuddy Bridge",
     "shortDescription": "Orchestrate bounded WorkBuddy workers with native subagent",
-    "longDescription": "A versioned, persistent, auditable, approval-gated, worktree-aware bridge from Codex to the WorkBuddy CLI, plus a native custom subagent (workbuddy_worker) with plaintext Hook delivery.",
+    "longDescription": "A model-selectable native WorkBuddy worker integration that translates Codex Responses requests to WorkBuddy ACP/CLI, plus a versioned, persistent, auditable, approval-gated parent-side WorkBuddy Bridge MCP server.",
     "developerName": "wuyi",
     "category": "Productivity",
     "capabilities": [
@@ -28,7 +28,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Delegate a bounded plan or confirmed scoped edit to workbuddy_worker.",
+      "Delegate a bounded plan or confirmed scoped edit to a selected WorkBuddy worker.",
       "Use the native subagent path for one-shot WorkBuddy tasks.",
       "Run a confirmed scoped edit through WorkBuddy and verify the evidence."
     ]
